@@ -183,6 +183,7 @@
         <opentelemetry-starter.version>2.15.0</opentelemetry-starter.version>
         <opentelemetry-logback.version>2.14.0-alpha</opentelemetry-logback.version>
         <opentelemetry-proto.version>1.3.1-alpha</opentelemetry-proto.version>
+        <s3.version>2.44.4</s3.version>
     </properties>
 
     <dependencyManagement>
@@ -534,6 +535,19 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <!-- amazon s3 -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>s3</artifactId>
+                <version>${s3.version}</version>
+                <scope>compile</scope>
+            </dependency>
+          <!-- 显式声明 http-client-spi，确保打包时包含在 classpath -->
+          <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>http-client-spi</artifactId>
+            <version>${s3.version}</version>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 

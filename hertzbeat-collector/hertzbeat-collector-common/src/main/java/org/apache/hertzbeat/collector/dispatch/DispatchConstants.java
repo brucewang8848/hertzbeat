@@ -253,4 +253,9 @@ public interface DispatchConstants {
      * protocol modbus
      */
     String PROTOCOL_S7 = "s7";
+
+    /**
+     * protocol s3 (S3 compatible object storage: AWS S3, MinIO, Huawei OBS, Alibaba OSS, etc.)
+     */
+    String PROTOCOL_S3 = "s3";
 }

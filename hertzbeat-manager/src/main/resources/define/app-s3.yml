@@ -1,0 +1,159 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# 监控类型类别：mid-中间件监控
+category: mid
+# 监控类型标识
+app: s3
+# 监控类型的国际化名称
+name:
+  zh-CN: S3 文件监控
+  en-US: S3 File Check
+  ja-JP: S3ファイル監視
+# 监控类型的描述和帮助信息
+help:
+  zh-CN: |
+    HertzBeat 对 S3 兼容对象存储中的文件进行存在性检测。
+    支持 Amazon S3、MinIO、华为 OBS、阿里 OSS 等对象存储服务。
+    对象键支持原子级日期变量：{yyyy}, {yy}, {MM}, {dd}, {HH}, {mm}, {ss}，可自由组合。
+    您可以点击 "<i>新建 S3 文件监控</i>" 并进行配置，或者选择"<i>更多操作</i>"，导入已有配置。
+  en-US: |
+    HertzBeat monitors file existence in S3-compatible object storage.
+    Supports Amazon S3, MinIO, Huawei OBS, Alibaba OSS and other S3-compatible storage services.
+    Object keys support atomic date variables: {yyyy}, {yy}, {MM}, {dd}, {HH}, {mm}, {ss}.
+    You can click "<i>New S3 File Check</i>" and configure it, or select "<i>More Actions</i>" to import an existing configuration.
+  zh-TW: |
+    HertzBeat 對 S3 相容物件儲存中的檔案進行存在性檢測。
+    支援 Amazon S3、MinIO、華為 OBS、阿里 OSS 等物件儲存服務。
+    物件鍵支援原子級日期變數：{yyyy}, {yy}, {MM}, {dd}, {HH}, {mm}, {ss}，可自由組合。
+helpLink:
+  zh-CN: https://hertzbeat.apache.org/zh-cn/docs/help/s3
+  en-US: https://hertzbeat.apache.org/docs/help/s3
+# 监控输入参数定义
+params:
+  - field: endpoint
+    name:
+      zh-CN: 服务端点
+      en-US: Endpoint
+    type: text
+    required: true
+    placeholder: 'https://s3.cn-north-1.amazonaws.com.cn'
+  - field: region
+    name:
+      zh-CN: 区域
+      en-US: Region
+    type: text
+    required: false
+    placeholder: 'cn-north-1'
+  - field: accessKey
+    name:
+      zh-CN: Access Key
+      en-US: Access Key
+    type: text
+    required: true
+  - field: secretKey
+    name:
+      zh-CN: Secret Key
+      en-US: Secret Key
+    type: password
+    required: true
+  - field: bucket
+    name:
+      zh-CN: Bucket名称
+      en-US: Bucket Name
+    type: text
+    required: true
+  - field: objectKey
+    name:
+      zh-CN: 对象键
+      en-US: Object Key
+    type: text
+    required: true
+    placeholder: 'data/{yyyy}/{MM}/{dd}/report.csv'
+  - field: pathStyle
+    name:
+      zh-CN: 路径风格访问
+      en-US: Path Style Access
+    type: boolean
+    required: true
+    defaultValue: 'false'
+  - field: timezone
+    name:
+      zh-CN: 时区
+      en-US: Timezone
+    type: text
+    required: false
+    placeholder: 'Asia/Shanghai'
+  - field: timeout
+    name:
+      zh-CN: 超时时间(ms)
+      en-US: Timeout(ms)
+    type: number
+    range: '[0,300000]'
+    required: true
+    defaultValue: 30000
+# 指标采集配置列表
+metrics:
+  # 指标 - 文件存在性
+  - name: fileCheck
+    i18n:
+      zh-CN: 文件检测
+      en-US: File Check
+    priority: 0
+    fields:
+      - field: objectKey
+        type: 1
+        i18n:
+          zh-CN: 对象键
+          en-US: Object Key
+      - field: exists
+        type: 1
+        i18n:
+          zh-CN: 文件存在
+          en-US: File Exists
+      - field: fileSize
+        type: 0
+        unit: B
+        i18n:
+          zh-CN: 文件大小
+          en-US: File Size
+      - field: lastModified
+        type: 1
+        i18n:
+          zh-CN: 最后修改时间
+          en-US: Last Modified
+      - field: responseTime
+        type: 0
+        unit: ms
+        i18n:
+          zh-CN: 响应时间
+          en-US: Response Time
+    # 协议配置中 aliasFields 的顺序与 fields 的顺序一致
+    aliasFields:
+      - objectKey
+      - exists
+      - fileSize
+      - lastModified
+      - responseTime
+    protocol: s3
+    s3:
+      endpoint: ^_^endpoint^_^
+      region: ^_^region^_^
+      accessKey: ^_^accessKey^_^
+      secretKey: ^_^secretKey^_^
+      bucket: ^_^bucket^_^
+      objectKey: ^_^objectKey^_^
+      pathStyle: ^_^pathStyle^_^
+      timezone: ^_^timezone^_^
+      timeout: ^_^timeout^_^

@@ -58,6 +58,8 @@ import org.apache.hertzbeat.common.entity.job.protocol.PushProtocol;
 import org.apache.hertzbeat.common.entity.job.protocol.RedfishProtocol;
 import org.apache.hertzbeat.common.entity.job.protocol.RedisProtocol;
 import org.apache.hertzbeat.common.entity.job.protocol.RocketmqProtocol;
+import org.apache.hertzbeat.common.entity.job.protocol.ObsProtocol;
+import org.apache.hertzbeat.common.entity.job.protocol.OssProtocol;
 import org.apache.hertzbeat.common.entity.job.protocol.S3Protocol;
 import org.apache.hertzbeat.common.entity.job.protocol.S7Protocol;
 import org.apache.hertzbeat.common.entity.job.protocol.ScriptProtocol;
@@ -305,6 +307,14 @@ public class Metrics {
      * Monitoring configuration information using the S3 compatible protocol
      */
     private S3Protocol s3;
+    /**
+     * Monitoring configuration information using the Huawei OBS protocol
+     */
+    private ObsProtocol obs;
+    /**
+     * Monitoring configuration information using the Alibaba Cloud OSS protocol
+     */
+    private OssProtocol oss;
     /**
      * collector use - Temporarily store subTask metrics response data
      */

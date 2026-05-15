@@ -18,26 +18,26 @@
 package org.apache.hertzbeat.common.entity.job.protocol;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 /**
- * S3 protocol
+ * Base protocol for object storage services (OBS, OSS, COS, etc.)
  */
 @Data
-@Builder
+@SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
-public class S3Protocol implements Protocol {
+public abstract class ObjectStorageProtocol implements Protocol {
 
     /**
-     * Service endpoint (e.g. https://s3.cn-north-1.amazonaws.com.cn)
+     * Service endpoint
      */
     private String endpoint;
 
     /**
-     * Region (e.g. cn-north-1)
+     * Region
      */
     private String region;
 
@@ -66,29 +66,23 @@ public class S3Protocol implements Protocol {
     private String objectKey;
 
     /**
-     * Path style access (true/false), MinIO/OBS etc. need to set to true
-     */
-    private String pathStyle;
-
-    /**
      * Date variable parsing timezone (e.g. Asia/Shanghai), default JVM timezone
      */
     private String timezone;
 
     /**
-     * Timeout in milliseconds, used for both connection timeout and read timeout
+     * Timeout in milliseconds
      */
     private String timeout;
 
     /**
-     * S3 operation type
+     * Operation type
      * <p>
      * Supported operations:
      * - headObject: Get object metadata (file existence, size, modification time)
      * - listObjects: List objects (directory statistics, latest file)
      * - headBucket: Check bucket existence and accessibility
-     * - getBucketLocation: Get bucket region
-     * - getBucketVersioning: Get versioning status
+     * - getBucketStorageInfo: Get bucket storage info (size, object count)
      * </p>
      */
     private String operation;

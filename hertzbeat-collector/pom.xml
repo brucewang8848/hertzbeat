@@ -42,6 +42,7 @@
         <module>hertzbeat-collector-rocketmq</module>
         <module>hertzbeat-collector-kafka</module>
         <module>hertzbeat-collector-s3</module>
+        <module>hertzbeat-collector-objectstore</module>
     </modules>
 
     <dependencyManagement>
@@ -79,6 +80,11 @@
             <dependency>
                 <groupId>org.apache.hertzbeat</groupId>
                 <artifactId>hertzbeat-collector-s3</artifactId>
+                <version>${hertzbeat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hertzbeat</groupId>
+                <artifactId>hertzbeat-collector-objectstore</artifactId>
                 <version>${hertzbeat.version}</version>
             </dependency>
         </dependencies>

@@ -11,12 +11,15 @@ S3 采集器为 Apache HertzBeat 新增了 S3 兼容对象存储的监控能力�
 - **腾讯云 COS**
 - 其他 S3 兼容的对象存储服务
 
-### 监控模式
+### 监控操作类型
 
-| 模式 | 判断条件 | 采集指标 |
-|------|---------|---------|
-| **文件监控** | objectKey 不以 `/` 结尾 | objectKey、exists、fileSize、lastModified、responseTime |
-| **目录监控** | objectKey 以 `/` 结尾 | prefix、fileCount、latestFile、latestModified、totalSize、responseTime |
+| 操作类型 | 说明 | 返回指标 |
+|---------|------|---------|
+| **headObject** | 获取对象元数据（文件存在性、大小、修改时间） | objectKey、exists、fileSize、lastModified、responseTime |
+| **listObjects** | 列举对象（目录统计） | prefix、fileCount、latestFile、latestModified、totalSize、responseTime |
+| **headBucket** | 检查 bucket 存在性和可访问性 | bucket、exists、accessible、responseTime |
+| **getBucketLocation** | 获取 bucket 所在地域 | bucket、region、responseTime |
+| **getBucketVersioning** | 获取版本控制状态 | bucket、versioning、responseTime |
 
 ### 日期变量支持
 
@@ -43,7 +46,7 @@ objectKey 支持原子级日期变量动态解析：
 | 文件路径 | 说明 |
 |---------|------|
 | `pom.xml` | Maven 模块配置，引入 AWS SDK S3 依赖 |
-| `src/main/java/org/apache/hertzbeat/collector/collect/s3/S3CollectImpl.java` | 核心采集器实现（315 行） |
+| `src/main/java/org/apache/hertzbeat/collector/collect/s3/S3CollectImpl.java` | 核心采集器实现，支持多种 S3 操作类型 |
 | `src/main/resources/META-INF/services/org.apache.hertzbeat.collector.collect.AbstractCollect` | SPI 服务注册文件（**必须**，否则启动时报 `ServiceConfigurationError`）|
 | `src/test/java/org/apache/hertzbeat/collector/collect/s3/S3CollectImplTest.java` | 单元测试类 |
 
@@ -63,8 +66,14 @@ objectKey 支持原子级日期变量动态解析：
 
 | 文件路径 | 变更内容 |
 |---------|---------|
-| `src/main/java/org/apache/hertzbeat/common/entity/job/protocol/S3Protocol.java` | 新增 S3 协议配置实体类 |
+| `src/main/java/org/apache/hertzbeat/common/entity/job/protocol/S3Protocol.java` | 新增 S3 协议配置实体类，包含 `operation` 字段 |
 | `src/main/java/org/apache/hertzbeat/common/entity/job/Metrics.java` | 新增 `S3Protocol s3` 字段 |
+
+### 2.5 hertzbeat-manager（管理模块）
+
+| 文件路径 | 变更内容 |
+|---------|---------|
+| `src/main/resources/define/app-s3.yml` | S3 监控模板定义，配置多种操作类型的监控指标 |
 
 ---
 
@@ -78,13 +87,28 @@ objectKey 支持原子级日期变量动态解析：
 | `accessKey` | ✅ | Access Key ID | `AKIAIOSFODNN7EXAMPLE` |
 | `secretKey` | ✅ | Secret Access Key | `wJalrXUtnFEMI/K7MDENG/...` |
 | `bucket` | ✅ | Bucket 名称 | `my-bucket` |
-| `objectKey` | ✅ | 对象键（支持日期变量） | `data/{yyyy}/{MM}/{dd}/report.csv` |
+| `operation` | ❌ | S3 操作类型（默认根据 objectKey 推断） | `headObject` / `listObjects` / `headBucket` / `getBucketLocation` / `getBucketVersioning` |
+| `objectKey` | 条件 | 对象键（支持日期变量）。headObject/listObjects 必填，其他操作可选 | `data/{yyyy}/{MM}/{dd}/report.csv` |
 | `region` | ❌ | 区域标识 | `cn-north-1` |
 | `pathStyle` | ❌ | 是否使用路径风格访问 | `true` / `false`（默认 false） |
 | `timezone` | ❌ | 日期变量解析时区 | `Asia/Shanghai`（默认 JVM 时区） |
 | `timeout` | ❌ | 超时时间（毫秒） | `30000`（默认 30000） |
 
-### 3.2 pathStyle 参数说明
+### 3.2 operation 参数说明
+
+| 操作类型 | 适用场景 | 必需参数 |
+|---------|---------|---------|
+| `headObject` | 监控单个文件是否存在、大小、修改时间 | endpoint、accessKey、secretKey、bucket、objectKey |
+| `listObjects` | 监控目录下的文件数量、总大小、最新文件 | endpoint、accessKey、secretKey、bucket、objectKey（以 / 结尾） |
+| `headBucket` | 检查 bucket 是否可访问 | endpoint、accessKey、secretKey、bucket |
+| `getBucketLocation` | 获取 bucket 所在地域 | endpoint、accessKey、secretKey、bucket |
+| `getBucketVersioning` | 获取 bucket 版本控制状态 | endpoint、accessKey、secretKey、bucket |
+
+**注意**：如果不指定 `operation`，系统会根据 `objectKey` 是否以 `/` 结尾自动推断：
+- 以 `/` 结尾 → `listObjects`
+- 不以 `/` 结尾 → `headObject`
+
+### 3.3 pathStyle 参数说明
 
 | 值 | 访问风格 | URL 示例 | 适用场景 |
 |---|---------|---------|---------|
@@ -95,7 +119,7 @@ objectKey 支持原子级日期变量动态解析：
 
 ## 四、监控模板配置示例
 
-### 4.1 文件监控模板
+### 4.1 文件监控模板（headObject）
 
 监控单个文件是否存在，并获取文件大小和最后修改时间：
 
@@ -126,6 +150,7 @@ metrics:
       - lastModified
       - responseTime
     s3:
+      operation: headObject
       endpoint: https://s3.cn-north-1.amazonaws.com.cn
       region: cn-north-1
       accessKey: ${ACCESS_KEY}
@@ -135,7 +160,7 @@ metrics:
       timeout: "30000"
 ```
 
-### 4.2 目录监控模板
+### 4.2 目录监控模板（listObjects）
 
 监控目录下的文件数量、总大小、最新文件等：
 
@@ -169,6 +194,7 @@ metrics:
       - totalSize
       - responseTime
     s3:
+      operation: listObjects
       endpoint: https://s3.cn-north-1.amazonaws.com.cn
       region: cn-north-1
       accessKey: ${ACCESS_KEY}
@@ -179,7 +205,112 @@ metrics:
       timeout: "30000"
 ```
 
-### 4.3 日期变量监控模板
+### 4.3 Bucket 健康检查模板（headBucket）
+
+检查 bucket 是否存在且可访问：
+
+```yaml
+# Bucket 健康检查 - S3 协议
+name: s3-bucket-health
+protocol: s3
+priority: 1
+
+metrics:
+  - name: bucket_health
+    priority: 0
+    fields:
+      - field: bucket
+        type: string
+      - field: exists
+        type: boolean
+      - field: accessible
+        type: boolean
+      - field: responseTime
+        type: long
+    aliasFields:
+      - bucket
+      - exists
+      - accessible
+      - responseTime
+    s3:
+      operation: headBucket
+      endpoint: https://s3.cn-north-1.amazonaws.com.cn
+      region: cn-north-1
+      accessKey: ${ACCESS_KEY}
+      secretKey: ${SECRET_KEY}
+      bucket: my-bucket
+      timeout: "30000"
+```
+
+### 4.4 Bucket 地域查询模板（getBucketLocation）
+
+获取 bucket 所在地域信息：
+
+```yaml
+# Bucket 地域查询 - S3 协议
+name: s3-bucket-location
+protocol: s3
+priority: 1
+
+metrics:
+  - name: bucket_location
+    priority: 0
+    fields:
+      - field: bucket
+        type: string
+      - field: region
+        type: string
+      - field: responseTime
+        type: long
+    aliasFields:
+      - bucket
+      - region
+      - responseTime
+    s3:
+      operation: getBucketLocation
+      endpoint: https://s3.cn-north-1.amazonaws.com.cn
+      region: cn-north-1
+      accessKey: ${ACCESS_KEY}
+      secretKey: ${SECRET_KEY}
+      bucket: my-bucket
+      timeout: "30000"
+```
+
+### 4.5 Bucket 版本控制状态模板（getBucketVersioning）
+
+获取 bucket 的版本控制状态：
+
+```yaml
+# Bucket 版本控制状态 - S3 协议
+name: s3-bucket-versioning
+protocol: s3
+priority: 1
+
+metrics:
+  - name: bucket_versioning
+    priority: 0
+    fields:
+      - field: bucket
+        type: string
+      - field: versioning
+        type: string
+      - field: responseTime
+        type: long
+    aliasFields:
+      - bucket
+      - versioning
+      - responseTime
+    s3:
+      operation: getBucketVersioning
+      endpoint: https://s3.cn-north-1.amazonaws.com.cn
+      region: cn-north-1
+      accessKey: ${ACCESS_KEY}
+      secretKey: ${SECRET_KEY}
+      bucket: my-bucket
+      timeout: "30000"
+```
+
+### 4.6 日期变量监控模板
 
 监控按日期归档的文件：
 
@@ -210,6 +341,7 @@ metrics:
       - lastModified
       - responseTime
     s3:
+      operation: headObject
       endpoint: https://s3.cn-north-1.amazonaws.com.cn
       region: cn-north-1
       accessKey: ${ACCESS_KEY}
@@ -228,6 +360,7 @@ metrics:
 
 ```yaml
 s3:
+  operation: headObject
   endpoint: https://s3.cn-north-1.amazonaws.com.cn
   region: cn-north-1
   accessKey: AKIAIOSFODNN7EXAMPLE
@@ -242,6 +375,7 @@ s3:
 
 ```yaml
 s3:
+  operation: headObject
   endpoint: https://s3.us-west-2.amazonaws.com
   region: us-west-2
   accessKey: AKIAIOSFODNN7EXAMPLE
@@ -256,6 +390,7 @@ s3:
 
 ```yaml
 s3:
+  operation: headObject
   endpoint: http://localhost:9000
   region: us-east-1
   accessKey: minioadmin
@@ -270,6 +405,7 @@ s3:
 
 ```yaml
 s3:
+  operation: headObject
   endpoint: https://obs.cn-north-4.myhuaweicloud.com
   region: cn-north-4
   accessKey: YOUR_HUAWEI_AK
@@ -284,6 +420,7 @@ s3:
 
 ```yaml
 s3:
+  operation: headObject
   endpoint: https://oss-cn-hangzhou.aliyuncs.com
   region: cn-hangzhou
   accessKey: YOUR_ALIYUN_ACCESS_KEY_ID
@@ -298,6 +435,7 @@ s3:
 
 ```yaml
 s3:
+  operation: headObject
   endpoint: https://cos.ap-guangzhou.myqcloud.com
   region: ap-guangzhou
   accessKey: YOUR_TENCENT_SECRET_ID
@@ -334,7 +472,18 @@ alert:
   message: "S3 目录 {{ $labels.prefix }} 为空，可能数据生成异常"
 ```
 
-### 6.3 响应时间告警
+### 6.3 Bucket 不可访问告警
+
+```yaml
+alert:
+  name: s3-bucket-inaccessible
+  expr: s3_bucket_accessible == 0
+  for: 1m
+  severity: critical
+  message: "S3 Bucket {{ $labels.bucket }} 不可访问"
+```
+
+### 6.4 响应时间告警
 
 ```yaml
 alert:
@@ -349,7 +498,11 @@ alert:
 
 ## 七、注意事项
 
-1. **权限要求**：AccessKey 需要具备目标 Bucket 的 `s3:HeadObject`（文件监控）或 `s3:ListBucket`（目录监控）权限。
+1. **权限要求**：
+   - `headObject` / `listObjects`：需要 `s3:GetObject` 和 `s3:ListBucket` 权限
+   - `headBucket`：需要 `s3:ListBucket` 权限
+   - `getBucketLocation`：需要 `s3:GetBucketLocation` 权限
+   - `getBucketVersioning`：需要 `s3:GetBucketVersioning` 权限
 
 2. **目录监控限制**：单次最多返回 1000 个对象，适用于文件数量可控的场景。如需监控大量文件，建议使用更细粒度的前缀。
 
@@ -358,6 +511,8 @@ alert:
 4. **网络连通性**：确保 HertzBeat 服务能够访问 S3 端点，必要时配置代理或防火墙规则。
 
 5. **凭证安全**：建议使用 `${ENV_VAR}` 形式引用环境变量，避免在配置文件中硬编码 AccessKey 和 SecretKey。
+
+6. **向后兼容**：如果不指定 `operation` 参数，系统会根据 `objectKey` 是否以 `/` 结尾自动推断操作类型，保持与旧版本的兼容性。
 
 ---
 
@@ -371,6 +526,7 @@ alert:
 | 日期变量未解析 | 变量格式错误 | 确保使用 `{yyyy}` 格式，区分大小写 |
 | MinIO 连接失败 | pathStyle 未设置 | 设置 `pathStyle: "true"` |
 | `ServiceConfigurationError: Provider S3CollectImpl not found` | SPI 配置文件缺失 | 确保 `hertzbeat-collector-s3.jar` 包含 `META-INF/services/org.apache.hertzbeat.collector.collect.AbstractCollect` 文件 |
+| `Unsupported S3 operation: xxx` | operation 参数错误 | 检查 operation 是否为支持的值：headObject、listObjects、headBucket、getBucketLocation、getBucketVersioning |
 
 ---
 
@@ -379,3 +535,4 @@ alert:
 - **HertzBeat 版本**：2.0-SNAPSHOT
 - **AWS SDK S3 版本**：2.44.4
 - **最低 Java 版本**：17
+- **新增功能**：支持多种 S3 操作类型（headObject、listObjects、headBucket、getBucketLocation、getBucketVersioning）

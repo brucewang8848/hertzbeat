@@ -12,32 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# 监控类型类别：mid-中间件监控
+# Monitor type category: mid-middleware monitoring
 category: mid
-# 监控类型标识
-app: s3
-# 监控类型的国际化名称
+# Monitor type identifier
+app: obs
+# Monitor type internationalization name
 name:
-  zh-CN: S3 对象存储监控
-  en-US: S3 Object Storage Monitor
-# 监控类型的描述和帮助信息
+  zh-CN: 华为云 OBS 监控
+  en-US: Huawei OBS Monitor
+# Monitor type description and help information
 help:
   zh-CN: |
-    HertzBeat 对 S3 兼容对象存储进行监控。
-    支持 Amazon S3、MinIO、华为 OBS、阿里 OSS 等对象存储服务。
-    支持多种操作类型：文件存在性检测、目录统计、Bucket 健康检查等。
+    HertzBeat 对华为云对象存储服务 OBS 进行监控。
+    支持多种操作类型：文件存在性检测、目录统计、Bucket 健康检查、Bucket 存储量统计等。
     对象键支持原子级日期变量：{yyyy}, {yy}, {MM}, {dd}, {HH}, {mm}, {ss}，可自由组合。
-    您可以点击 "<i>新建 S3 对象存储监控</i>" 并进行配置，或者选择"<i>更多操作</i>"，导入已有配置。
+    您可以点击 "<i>新建 OBS 监控</i>" 并进行配置，或者选择"<i>更多操作</i>"，导入已有配置。
   en-US: |
-    HertzBeat monitors S3-compatible object storage.
-    Supports Amazon S3, MinIO, Huawei OBS, Alibaba OSS and other S3-compatible storage services.
-    Supports multiple operation types: file existence check, directory statistics, bucket health check, etc.
+    HertzBeat monitors Huawei Object Storage Service (OBS).
+    Supports multiple operation types: file existence check, directory statistics, bucket health check, bucket storage info, etc.
     Object keys support atomic date variables: {yyyy}, {yy}, {MM}, {dd}, {HH}, {mm}, {ss}.
-    You can click "<i>New S3 Object Storage Monitor</i>" and configure it, or select "<i>More Actions</i>" to import an existing configuration.
+    You can click "<i>New OBS Monitor</i>" and configure it, or select "<i>More Actions</i>" to import an existing configuration.
 helpLink:
-  zh-CN: https://hertzbeat.apache.org/zh-cn/docs/help/s3
-  en-US: https://hertzbeat.apache.org/docs/help/s3
-# 监控输入参数定义
+  zh-CN: https://hertzbeat.apache.org/zh-cn/docs/help/obs
+  en-US: https://hertzbeat.apache.org/docs/help/obs
+# Monitor input parameter definition
 params:
   - field: endpoint
     name:
@@ -45,14 +43,7 @@ params:
       en-US: Endpoint
     type: text
     required: true
-    placeholder: 'https://s3.cn-north-1.amazonaws.com.cn'
-  - field: region
-    name:
-      zh-CN: 区域
-      en-US: Region
-    type: text
-    required: false
-    placeholder: 'cn-north-1'
+    placeholder: 'https://obs.cn-north-4.myhuaweicloud.com'
   - field: accessKey
     name:
       zh-CN: Access Key
@@ -78,13 +69,6 @@ params:
     type: text
     required: false
     placeholder: 'data/{yyyy}/{MM}/{dd}/report.csv'
-  - field: pathStyle
-    name:
-      zh-CN: 路径风格访问
-      en-US: Path Style Access
-    type: boolean
-    required: true
-    defaultValue: 'false'
   - field: timezone
     name:
       zh-CN: 时区
@@ -100,9 +84,9 @@ params:
     range: '[0,300000]'
     required: true
     defaultValue: 30000
-# 指标采集配置列表
+# Metrics collection configuration list
 metrics:
-  # 指标 - 文件存在性检测
+  # Metric - File existence check
   - name: fileCheck
     i18n:
       zh-CN: 文件检测
@@ -142,20 +126,18 @@ metrics:
       - fileSize
       - lastModified
       - responseTime
-    protocol: s3
-    s3:
+    protocol: obs
+    obs:
       operation: headObject
       endpoint: ^_^endpoint^_^
-      region: ^_^region^_^
       accessKey: ^_^accessKey^_^
       secretKey: ^_^secretKey^_^
       bucket: ^_^bucket^_^
       objectKey: ^_^objectKey^_^
-      pathStyle: ^_^pathStyle^_^
       timezone: ^_^timezone^_^
       timeout: ^_^timeout^_^
 
-  # 指标 - 目录统计
+  # Metric - Directory statistics
   - name: dirStats
     i18n:
       zh-CN: 目录统计
@@ -201,20 +183,18 @@ metrics:
       - latestFile
       - latestModified
       - responseTime
-    protocol: s3
-    s3:
+    protocol: obs
+    obs:
       operation: listObjects
       endpoint: ^_^endpoint^_^
-      region: ^_^region^_^
       accessKey: ^_^accessKey^_^
       secretKey: ^_^secretKey^_^
       bucket: ^_^bucket^_^
       objectKey: ^_^objectKey^_^
-      pathStyle: ^_^pathStyle^_^
       timezone: ^_^timezone^_^
       timeout: ^_^timeout^_^
 
-  # 指标 - Bucket 健康检查
+  # Metric - Bucket health check
   - name: bucketHealth
     i18n:
       zh-CN: Bucket健康
@@ -247,22 +227,20 @@ metrics:
       - exists
       - accessible
       - responseTime
-    protocol: s3
-    s3:
+    protocol: obs
+    obs:
       operation: headBucket
       endpoint: ^_^endpoint^_^
-      region: ^_^region^_^
       accessKey: ^_^accessKey^_^
       secretKey: ^_^secretKey^_^
       bucket: ^_^bucket^_^
-      pathStyle: ^_^pathStyle^_^
       timeout: ^_^timeout^_^
 
-  # 指标 - Bucket 地域
-  - name: bucketLocation
+  # Metric - Bucket storage info (OBS-specific, not available in standard S3)
+  - name: bucketStorageInfo
     i18n:
-      zh-CN: Bucket地域
-      en-US: Bucket Location
+      zh-CN: Bucket存储信息
+      en-US: Bucket Storage Info
     priority: 3
     fields:
       - field: bucket
@@ -270,11 +248,17 @@ metrics:
         i18n:
           zh-CN: Bucket名称
           en-US: Bucket Name
-      - field: region
-        type: 1
+      - field: bucketSize
+        type: 0
+        unit: B
         i18n:
-          zh-CN: 所在地域
-          en-US: Region
+          zh-CN: Bucket总大小
+          en-US: Bucket Total Size
+      - field: objectCount
+        type: 0
+        i18n:
+          zh-CN: 对象数量
+          en-US: Object Count
       - field: responseTime
         type: 0
         unit: ms
@@ -283,53 +267,14 @@ metrics:
           en-US: Response Time
     aliasFields:
       - bucket
-      - region
+      - bucketSize
+      - objectCount
       - responseTime
-    protocol: s3
-    s3:
-      operation: getBucketLocation
+    protocol: obs
+    obs:
+      operation: getBucketStorageInfo
       endpoint: ^_^endpoint^_^
-      region: ^_^region^_^
       accessKey: ^_^accessKey^_^
       secretKey: ^_^secretKey^_^
       bucket: ^_^bucket^_^
-      pathStyle: ^_^pathStyle^_^
-      timeout: ^_^timeout^_^
-
-  # 指标 - Bucket 版本控制
-  - name: bucketVersioning
-    i18n:
-      zh-CN: 版本控制
-      en-US: Versioning
-    priority: 4
-    fields:
-      - field: bucket
-        type: 1
-        i18n:
-          zh-CN: Bucket名称
-          en-US: Bucket Name
-      - field: versioning
-        type: 1
-        i18n:
-          zh-CN: 版本控制状态
-          en-US: Versioning Status
-      - field: responseTime
-        type: 0
-        unit: ms
-        i18n:
-          zh-CN: 响应时间
-          en-US: Response Time
-    aliasFields:
-      - bucket
-      - versioning
-      - responseTime
-    protocol: s3
-    s3:
-      operation: getBucketVersioning
-      endpoint: ^_^endpoint^_^
-      region: ^_^region^_^
-      accessKey: ^_^accessKey^_^
-      secretKey: ^_^secretKey^_^
-      bucket: ^_^bucket^_^
-      pathStyle: ^_^pathStyle^_^
       timeout: ^_^timeout^_^

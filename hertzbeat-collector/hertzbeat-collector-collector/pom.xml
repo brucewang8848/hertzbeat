@@ -63,6 +63,13 @@
         <version>${hertzbeat.version}</version>
       </dependency>
 
+      <!-- collector-objectstore -->
+      <dependency>
+        <groupId>org.apache.hertzbeat</groupId>
+        <artifactId>hertzbeat-collector-objectstore</artifactId>
+        <version>${hertzbeat.version}</version>
+      </dependency>
+
         <!-- collector-nebulagraph -->
         <dependency>
             <groupId>org.apache.hertzbeat</groupId>

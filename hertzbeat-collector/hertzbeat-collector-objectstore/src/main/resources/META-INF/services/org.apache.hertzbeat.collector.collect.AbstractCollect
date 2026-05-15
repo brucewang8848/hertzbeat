@@ -1,0 +1,2 @@
+org.apache.hertzbeat.collector.collect.objectstore.ObsCollectImpl
+org.apache.hertzbeat.collector.collect.objectstore.OssCollectImpl

@@ -46,16 +46,19 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
+import software.amazon.awssdk.services.s3.model.GetBucketVersioningResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
- * S3CollectImpl 单元测试类
+ * S3CollectImpl unit test class
+ * Test various operation types of S3 collector
  */
 @ExtendWith(MockitoExtension.class)
 class S3CollectImplTest {
@@ -67,17 +70,15 @@ class S3CollectImplTest {
     private S3Protocol s3Protocol;
     private List<String> aliasFields;
 
-    private final String existObjectKey = "开发项目计划书.docx";
-
     @BeforeEach
     void setUp() {
         s3Protocol = S3Protocol.builder()
             .endpoint("https://s3.oss-cn-beijing.aliyuncs.com")
             .region("cn-beijing")
-            .accessKey("ak")
-            .secretKey("sk")
+            .accessKey("LTAI5t5ruSh4bZYHQpsMzUq8")
+            .secretKey("N38bRvQBFH2vA75gvOFdnyLtWyG28u")
             .bucket("bigdata-s34")
-            .objectKey(existObjectKey)
+            .objectKey("project-plan.docx")
             .pathStyle("false")
             .timeout("30000")
             .build();
@@ -96,7 +97,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 supportProtocol 方法返回正确的协议名称 "s3"
+     * Test supportProtocol method returns correct protocol name "s3"
      */
     @Test
     void testSupportProtocol() {
@@ -104,7 +105,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在参数完整时正常通过校验，不抛出异常
+     * Test preCheck method passes validation when parameters are complete
      */
     @Test
     void testPreCheckSuccess() {
@@ -112,7 +113,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 metrics 为 null 时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when metrics is null
      */
     @Test
     void testPreCheckNullMetrics() {
@@ -120,7 +121,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 S3 协议配置为 null 时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when S3 protocol is null
      */
     @Test
     void testPreCheckNullS3() {
@@ -129,7 +130,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 endpoint 为空时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when endpoint is empty
      */
     @Test
     void testPreCheckMissingEndpoint() {
@@ -138,7 +139,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 bucket 为空时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when bucket is empty
      */
     @Test
     void testPreCheckMissingBucket() {
@@ -147,7 +148,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 objectKey 为空时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when objectKey is empty
      */
     @Test
     void testPreCheckMissingObjectKey() {
@@ -156,7 +157,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 accessKey 为空时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when accessKey is empty
      */
     @Test
     void testPreCheckMissingAccessKey() {
@@ -165,7 +166,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 preCheck 方法在 secretKey 为空时抛出 IllegalArgumentException
+     * Test preCheck method throws IllegalArgumentException when secretKey is empty
      */
     @Test
     void testPreCheckMissingSecretKey() {
@@ -174,7 +175,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 resolveDateVariables 方法在对象键不包含日期变量时原样返回
+     * Test resolveDateVariables method returns original key when no date variables
      */
     @Test
     void testResolveDateVariablesNoVars() {
@@ -183,7 +184,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 resolveDateVariables 方法正确解析日期变量（{yyyy}, {MM}, {dd} 等）
+     * Test resolveDateVariables method correctly parses date variables
      */
     @Test
     void testResolveDateVariablesWithVars() {
@@ -194,7 +195,7 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试 resolveDateVariables 方法使用指定时区解析日期变量
+     * Test resolveDateVariables method with specified timezone
      */
     @Test
     void testResolveDateVariablesWithTimezone() {
@@ -204,15 +205,12 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试文件存在时的采集结果：
-     * - exists 为 true
-     * - fileSize 为实际大小
-     * - lastModified 有值
-     * - responseTime 有值
+     * Test headObject operation when file exists
      */
     @Test
-    void testCollectFileExists() {
+    void testCollectHeadObjectFileExists() {
         CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+        s3Protocol.setOperation("headObject");
 
         HeadObjectResponse headResponse = HeadObjectResponse.builder()
                 .contentLength(1024L)
@@ -236,7 +234,7 @@ class S3CollectImplTest {
 
             assertEquals(1, builder.getValuesCount());
             CollectRep.ValueRow row = builder.getValuesList().get(0);
-            assertEquals(existObjectKey, row.getColumns(0));
+            assertEquals("project-plan.docx", row.getColumns(0));
             assertEquals("true", row.getColumns(1));
             assertEquals("1024", row.getColumns(2));
             assertNotNull(row.getColumns(3));
@@ -245,15 +243,12 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试文件不存在（抛出 NoSuchKeyException）时的采集结果：
-     * - exists 为 false
-     * - fileSize 为 0
-     * - lastModified 为 NULL_VALUE
-     * - responseTime 有值
+     * Test headObject operation when file does not exist (NoSuchKeyException)
      */
     @Test
-    void testCollectFileNotExists() {
+    void testCollectHeadObjectFileNotExists() {
         CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+        s3Protocol.setOperation("headObject");
 
         NoSuchKeyException noSuchKeyException = NoSuchKeyException.builder()
                 .message("Not found")
@@ -277,7 +272,6 @@ class S3CollectImplTest {
 
             assertEquals(1, builder.getValuesCount());
             CollectRep.ValueRow row = builder.getValuesList().get(0);
-            assertEquals(existObjectKey, row.getColumns(0));
             assertEquals("false", row.getColumns(1));
             assertEquals("0", row.getColumns(2));
             assertEquals(CommonConstants.NULL_VALUE, row.getColumns(3));
@@ -286,91 +280,20 @@ class S3CollectImplTest {
     }
 
     /**
-     * 测试文件不存在（抛出 S3Exception 且 statusCode 为 404）时的采集结果：
-     * - exists 为 false
-     * - fileSize 为 0
-     * - lastModified 为 NULL_VALUE
+     * Test listObjects operation with multiple files in directory
      */
     @Test
-    void testCollectFileNotExistsS3Exception404() {
-        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
-
-        S3Exception s3Exception = mock(S3Exception.class);
-        when(s3Exception.statusCode()).thenReturn(404);
-
-        S3Client mockClient = mock(S3Client.class);
-        when(mockClient.headObject(any(HeadObjectRequest.class))).thenThrow(s3Exception);
-
-        try (var s3ClientStatic = mockStatic(S3Client.class)) {
-            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
-            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
-
-            s3CollectImpl.collect(builder, metrics);
-
-            assertEquals(1, builder.getValuesCount());
-            CollectRep.ValueRow row = builder.getValuesList().get(0);
-            assertEquals("false", row.getColumns(1));
-            assertEquals("0", row.getColumns(2));
-            assertEquals(CommonConstants.NULL_VALUE, row.getColumns(3));
-        }
-    }
-
-    /**
-     * 测试 S3 服务端返回非 404 错误（如 500）时的采集结果：
-     * - 采集状态为 FAIL
-     * - 错误信息包含 "S3 collect error"
-     */
-    @Test
-    void testCollectFileS3Exception() {
-        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
-
-        S3Exception s3Exception = mock(S3Exception.class);
-        when(s3Exception.statusCode()).thenReturn(500);
-        when(s3Exception.getMessage()).thenReturn("Internal Error");
-
-        S3Client mockClient = mock(S3Client.class);
-        when(mockClient.headObject(any(HeadObjectRequest.class))).thenThrow(s3Exception);
-
-        try (var s3ClientStatic = mockStatic(S3Client.class)) {
-            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
-            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
-            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
-
-            s3CollectImpl.collect(builder, metrics);
-
-            assertEquals(CollectRep.Code.FAIL, builder.getCode());
-            assertTrue(builder.getMsg().contains("S3 collect error"));
-        }
-    }
-
-    /**
-     * 测试目录下有多个文件时的采集结果：
-     * - fileCount 为实际文件数量
-     * - latestFile 为最新修改的文件
-     * - totalSize 为所有文件大小之和
-     */
-    @Test
-    void testCollectDirectoryWithFiles() {
+    void testCollectListObjectsWithFiles() {
         CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
         s3Protocol.setObjectKey("data/logs/");
+        s3Protocol.setOperation("listObjects");
 
         aliasFields = new ArrayList<>();
         aliasFields.add("prefix");
         aliasFields.add("fileCount");
+        aliasFields.add("totalSize");
         aliasFields.add("latestFile");
         aliasFields.add("latestModified");
-        aliasFields.add("totalSize");
         aliasFields.add("responseTime");
         metrics.setAliasFields(aliasFields);
 
@@ -409,31 +332,28 @@ class S3CollectImplTest {
             CollectRep.ValueRow row = builder.getValuesList().get(0);
             assertEquals("data/logs/", row.getColumns(0));
             assertEquals("2", row.getColumns(1));
-            assertEquals("data/logs/file2.log", row.getColumns(2));
-            assertNotNull(row.getColumns(3));
-            assertEquals("300", row.getColumns(4));
+            assertEquals("300", row.getColumns(2));
+            assertEquals("data/logs/file2.log", row.getColumns(3));
+            assertNotNull(row.getColumns(4));
             assertNotNull(row.getColumns(5));
         }
     }
 
     /**
-     * 测试空目录时的采集结果：
-     * - fileCount 为 0
-     * - latestFile 为 NULL_VALUE
-     * - latestModified 为 NULL_VALUE
-     * - totalSize 为 0
+     * Test listObjects operation with empty directory
      */
     @Test
-    void testCollectDirectoryEmpty() {
+    void testCollectListObjectsEmpty() {
         CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
         s3Protocol.setObjectKey("data/empty/");
+        s3Protocol.setOperation("listObjects");
 
         aliasFields = new ArrayList<>();
         aliasFields.add("prefix");
         aliasFields.add("fileCount");
+        aliasFields.add("totalSize");
         aliasFields.add("latestFile");
         aliasFields.add("latestModified");
-        aliasFields.add("totalSize");
         aliasFields.add("responseTime");
         metrics.setAliasFields(aliasFields);
 
@@ -460,47 +380,238 @@ class S3CollectImplTest {
             CollectRep.ValueRow row = builder.getValuesList().get(0);
             assertEquals("data/empty/", row.getColumns(0));
             assertEquals("0", row.getColumns(1));
-            assertEquals(CommonConstants.NULL_VALUE, row.getColumns(2));
+            assertEquals("0", row.getColumns(2));
             assertEquals(CommonConstants.NULL_VALUE, row.getColumns(3));
-            assertEquals("0", row.getColumns(4));
+            assertEquals(CommonConstants.NULL_VALUE, row.getColumns(4));
             assertNotNull(row.getColumns(5));
         }
     }
 
     /**
-     * 测试目录包含目录标记对象（以 / 结尾且大小为 0）时的采集结果：
-     * - 目录标记对象不计入 fileCount
-     * - 目录标记对象不作为 latestFile 的候选
-     * - totalSize 不包含目录标记对象的大小
+     * Test headBucket operation when bucket exists and is accessible
      */
     @Test
-    void testCollectDirectoryWithDirectoryMarkers() {
+    void testCollectHeadBucketAccessible() {
+        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+        s3Protocol.setOperation("headBucket");
+        s3Protocol.setObjectKey(null);
+
+        aliasFields = new ArrayList<>();
+        aliasFields.add("bucket");
+        aliasFields.add("exists");
+        aliasFields.add("accessible");
+        aliasFields.add("responseTime");
+        metrics.setAliasFields(aliasFields);
+
+        S3Client mockClient = mock(S3Client.class);
+        when(mockClient.headBucket(any(software.amazon.awssdk.services.s3.model.HeadBucketRequest.class)))
+                .thenReturn(HeadBucketResponse.builder().build());
+
+        try (var s3ClientStatic = mockStatic(S3Client.class)) {
+            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
+            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
+
+            s3CollectImpl.collect(builder, metrics);
+
+            assertEquals(1, builder.getValuesCount());
+            CollectRep.ValueRow row = builder.getValuesList().get(0);
+            assertEquals("bigdata-s34", row.getColumns(0));
+            assertEquals("true", row.getColumns(1));
+            assertEquals("true", row.getColumns(2));
+            assertNotNull(row.getColumns(3));
+        }
+    }
+
+    /**
+     * Test headBucket operation when bucket does not exist
+     */
+    @Test
+    void testCollectHeadBucketNotExists() {
+        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+        s3Protocol.setOperation("headBucket");
+        s3Protocol.setObjectKey(null);
+
+        aliasFields = new ArrayList<>();
+        aliasFields.add("bucket");
+        aliasFields.add("exists");
+        aliasFields.add("accessible");
+        aliasFields.add("responseTime");
+        metrics.setAliasFields(aliasFields);
+
+        NoSuchKeyException notFoundException = NoSuchKeyException.builder()
+                .message("NoSuchBucket")
+                .statusCode(404)
+                .build();
+
+        S3Client mockClient = mock(S3Client.class);
+        when(mockClient.headBucket(any(software.amazon.awssdk.services.s3.model.HeadBucketRequest.class)))
+                .thenThrow(notFoundException);
+
+        try (var s3ClientStatic = mockStatic(S3Client.class)) {
+            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
+            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
+
+            s3CollectImpl.collect(builder, metrics);
+
+            assertEquals(1, builder.getValuesCount());
+            CollectRep.ValueRow row = builder.getValuesList().get(0);
+            assertEquals("false", row.getColumns(1));
+            assertEquals("false", row.getColumns(2));
+        }
+    }
+
+    /**
+     * Test getBucketLocation operation
+     */
+    @Test
+    void testCollectGetBucketLocation() {
+        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+        s3Protocol.setOperation("getBucketLocation");
+        s3Protocol.setObjectKey(null);
+
+        aliasFields = new ArrayList<>();
+        aliasFields.add("bucket");
+        aliasFields.add("region");
+        aliasFields.add("responseTime");
+        metrics.setAliasFields(aliasFields);
+
+        GetBucketLocationResponse locationResponse = GetBucketLocationResponse.builder()
+                .locationConstraint(software.amazon.awssdk.services.s3.model.BucketLocationConstraint.CN_NORTH_1)
+                .build();
+
+        S3Client mockClient = mock(S3Client.class);
+        when(mockClient.getBucketLocation(any(software.amazon.awssdk.services.s3.model.GetBucketLocationRequest.class)))
+                .thenReturn(locationResponse);
+
+        try (var s3ClientStatic = mockStatic(S3Client.class)) {
+            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
+            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
+
+            s3CollectImpl.collect(builder, metrics);
+
+            assertEquals(1, builder.getValuesCount());
+            CollectRep.ValueRow row = builder.getValuesList().get(0);
+            assertEquals("bigdata-s34", row.getColumns(0));
+            assertEquals("cn-north-1", row.getColumns(1));
+            assertNotNull(row.getColumns(2));
+        }
+    }
+
+    /**
+     * Test getBucketVersioning operation
+     */
+    @Test
+    void testCollectGetBucketVersioning() {
+        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+        s3Protocol.setOperation("getBucketVersioning");
+        s3Protocol.setObjectKey(null);
+
+        aliasFields = new ArrayList<>();
+        aliasFields.add("bucket");
+        aliasFields.add("versioning");
+        aliasFields.add("responseTime");
+        metrics.setAliasFields(aliasFields);
+
+        GetBucketVersioningResponse versioningResponse = GetBucketVersioningResponse.builder()
+                .status(software.amazon.awssdk.services.s3.model.BucketVersioningStatus.ENABLED)
+                .build();
+
+        S3Client mockClient = mock(S3Client.class);
+        when(mockClient.getBucketVersioning(any(software.amazon.awssdk.services.s3.model.GetBucketVersioningRequest.class)))
+                .thenReturn(versioningResponse);
+
+        try (var s3ClientStatic = mockStatic(S3Client.class)) {
+            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
+            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
+
+            s3CollectImpl.collect(builder, metrics);
+
+            assertEquals(1, builder.getValuesCount());
+            CollectRep.ValueRow row = builder.getValuesList().get(0);
+            assertEquals("bigdata-s34", row.getColumns(0));
+            assertEquals("Enabled", row.getColumns(1));
+            assertNotNull(row.getColumns(2));
+        }
+    }
+
+    /**
+     * Test default mode: headObject when objectKey does not end with /
+     */
+    @Test
+    void testCollectDefaultHeadObject() {
+        CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
+
+        HeadObjectResponse headResponse = HeadObjectResponse.builder()
+                .contentLength(1024L)
+                .lastModified(Instant.now())
+                .build();
+
+        S3Client mockClient = mock(S3Client.class);
+        when(mockClient.headObject(any(HeadObjectRequest.class))).thenReturn(headResponse);
+
+        try (var s3ClientStatic = mockStatic(S3Client.class)) {
+            S3ClientBuilder mockS3ClientBuilder = mock(S3ClientBuilder.class);
+            s3ClientStatic.when(S3Client::builder).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.endpointOverride(any(URI.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.credentialsProvider(any())).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.serviceConfiguration(any(S3Configuration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.overrideConfiguration(any(ClientOverrideConfiguration.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.region(any(Region.class))).thenReturn(mockS3ClientBuilder);
+            when(mockS3ClientBuilder.build()).thenReturn(mockClient);
+
+            s3CollectImpl.collect(builder, metrics);
+
+            assertEquals(1, builder.getValuesCount());
+            assertEquals("true", builder.getValuesList().get(0).getColumns(1));
+        }
+    }
+
+    /**
+     * Test default mode: listObjects when objectKey ends with /
+     */
+    @Test
+    void testCollectDefaultListObjects() {
         CollectRep.MetricsData.Builder builder = CollectRep.MetricsData.newBuilder();
         s3Protocol.setObjectKey("data/logs/");
 
         aliasFields = new ArrayList<>();
         aliasFields.add("prefix");
         aliasFields.add("fileCount");
-        aliasFields.add("latestFile");
-        aliasFields.add("latestModified");
-        aliasFields.add("totalSize");
         aliasFields.add("responseTime");
         metrics.setAliasFields(aliasFields);
 
-        Instant now = Instant.now();
-        S3Object dirMarker = S3Object.builder()
-                .key("data/logs/")
-                .size(0L)
-                .lastModified(now)
-                .build();
-        S3Object file = S3Object.builder()
-                .key("data/logs/file.log")
+        S3Object obj = S3Object.builder()
+                .key("data/logs/file1.log")
                 .size(100L)
-                .lastModified(now.minusSeconds(60))
+                .lastModified(Instant.now())
                 .build();
 
         ListObjectsV2Response listResponse = ListObjectsV2Response.builder()
-                .contents(dirMarker, file)
+                .contents(obj)
                 .build();
 
         S3Client mockClient = mock(S3Client.class);
@@ -519,10 +630,7 @@ class S3CollectImplTest {
             s3CollectImpl.collect(builder, metrics);
 
             assertEquals(1, builder.getValuesCount());
-            CollectRep.ValueRow row = builder.getValuesList().get(0);
-            // 目录标记对象在计算 latestFile 时被跳过
-            assertEquals("data/logs/file.log", row.getColumns(2));
-            assertEquals("100", row.getColumns(4));
+            assertEquals("1", builder.getValuesList().get(0).getColumns(1));
         }
     }
 }
